@@ -31,7 +31,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchBooks() async {
     setState(() {
-      isLoading = true;
+      if (isDeletingBookLoading || isAddBookLoading || isupdateBookLoading) {
+        isLoading = false;
+      } else {
+        isLoading = true;
+      }
     });
 
     final result = await _bookService.fetchBooks();
@@ -44,15 +48,15 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         isLoading = false;
       });
-      showSnackBar(error.toString());
+      showSnackBar(message: error.toString(), color: Colors.red);
     });
   }
 
   Future<void> addBook() async {
-    final id = int.parse(bookIdController.text);
-    final tittle = bookTittleController.text;
-    final author = bookAuthorController.text;
     if (formkey.currentState!.validate()) {
+      final id = int.parse(bookIdController.text);
+      final tittle = bookTittleController.text;
+      final author = bookAuthorController.text;
       setState(() {
         isAddBookLoading = true;
       });
@@ -64,20 +68,19 @@ class _HomePageState extends State<HomePage> {
           author: author,
         ),
       );
-      result.when((success) {
+      result.when((success) async {
+        await fetchBooks();
         setState(() {
           isAddBookLoading = false;
         });
-
-        showSnackBar("Book Successfully Added");
+        showSnackBar(color: Colors.green, message: "Book Successfully Added");
         hidekeyboard();
-        fetchBooks();
         clearTextField();
       }, (error) {
         setState(() {
           isAddBookLoading = false;
         });
-        showSnackBar("Something Wrong");
+        showSnackBar(message: error.toString(), color: Colors.red);
       });
     }
   }
@@ -98,20 +101,20 @@ class _HomePageState extends State<HomePage> {
           author: author,
         ),
       );
-      result.when((success) {
+      result.when((success) async {
+        hidekeyboard();
+        await fetchBooks();
         setState(() {
           isupdateBookLoading = false;
           isUpdateButtonEnable = false;
         });
         clearTextField();
-        showSnackBar("Book Successfully Updated");
-        hidekeyboard();
-        fetchBooks();
+        showSnackBar(message: "Book Successfully Updated", color: Colors.blue);
       }, (error) {
         setState(() {
           isupdateBookLoading = false;
         });
-        showSnackBar(error.toString());
+        showSnackBar(message: error.toString(), color: Colors.red);
       });
     }
   }
@@ -120,25 +123,26 @@ class _HomePageState extends State<HomePage> {
     isDeletingBookLoading = true;
     var result = await _bookService.deleteBook(bookId);
 
-    result.when((success) {
-      fetchBooks();
+    result.when((success) async {
+      await fetchBooks();
+
       setState(() {
         isDeletingBookLoading = false;
       });
+      showSnackBar(message: "Book Successfully Deleted", color: Colors.red);
     }, (error) {
       setState(() {
         isDeletingBookLoading = false;
       });
-      showSnackBar(error.toString());
+      showSnackBar(message: error.toString(), color: Colors.red);
     });
   }
 
-  void showSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
   void clearTextField() {
+    bookAuthorController.clear();
+    bookIdController.clear();
+
+    bookTittleController.clear();
     formkey.currentState?.reset();
   }
 
@@ -146,11 +150,30 @@ class _HomePageState extends State<HomePage> {
     FocusScope.of(context).unfocus();
   }
 
+  void showSnackBar({required String message, required Color color}) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+        ))
+        .closed
+        .then((value) => ScaffoldMessenger.of(context).clearSnackBars());
+  }
+
+  @override
+  void dispose() {
+    formkey.currentState?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book List'),
+        title: const Text(
+          'Book List',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           IconButton(
               onPressed: () {
@@ -181,6 +204,7 @@ class _HomePageState extends State<HomePage> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   child: TextFormField(
                     controller: bookIdController,
+                    enabled: isUpdateButtonEnable ? false : true,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
@@ -235,6 +259,9 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ),
+                const SizedBox(
+                  height: 15,
+                ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -259,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Colors.white,
+                                          color: Colors.blue,
                                         ),
                                       ),
                                     )
@@ -274,7 +301,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-
+                const SizedBox(
+                  height: 10,
+                ),
                 Flexible(
                   child: SizedBox(
                     height: MediaQuery.of(context).size.height * 0.6,
@@ -300,73 +329,85 @@ class _HomePageState extends State<HomePage> {
                                   itemCount: _books.length,
                                   itemBuilder: (context, index) {
                                     final book = _books[index];
-                                    return Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(6),
-                                        child: ListTile(
-                                          title: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text("Book Id : ${book.id}"),
-                                              const SizedBox(
-                                                height: 5,
-                                              ),
-                                              Text(
-                                                  "Book Tittle : ${book.title}"),
-                                              const SizedBox(
-                                                height: 5,
-                                              ),
-                                            ],
-                                          ),
-                                          subtitle: Text(
-                                              "Author Name : ${book.author}"),
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    isDeletingBookLoading =
-                                                        true;
-                                                    tapIndex = index;
-                                                  });
-                                                  deleteBook(bookId: book.id);
-                                                },
-                                                icon: isDeletingBookLoading &&
-                                                        tapIndex == index
-                                                    ? const SizedBox(
-                                                        height: 20,
-                                                        width: 20,
-                                                        child:
-                                                            CircularProgressIndicator())
-                                                    : const Icon(Icons.delete),
-                                                color: Colors.red,
-                                              ),
-                                              IconButton(
-                                                onPressed: () {
-                                                  bookAuthorController.text =
-                                                      book.author;
-                                                  bookIdController.text =
-                                                      book.id.toString();
-                                                  bookTittleController.text =
-                                                      book.title;
-                                                  setState(() {
-                                                    if (!isUpdateButtonEnable) {
-                                                      isUpdateButtonEnable =
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 10, right: 10),
+                                      child: Card(
+                                        elevation: 3,
+                                        color: Colors.white,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(6),
+                                          child: ListTile(
+                                            title: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Book Id : ${book.id}",
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                ),
+                                                const SizedBox(
+                                                  height: 5,
+                                                ),
+                                                Text(
+                                                    "Book Tittle : ${book.title}"),
+                                                const SizedBox(
+                                                  height: 5,
+                                                ),
+                                              ],
+                                            ),
+                                            subtitle: Text(
+                                                "Author Name : ${book.author}"),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      isDeletingBookLoading =
                                                           true;
-                                                    } else {
-                                                      isUpdateButtonEnable =
-                                                          false;
-                                                    }
-                                                  });
-                                                },
-                                                icon: const Icon(Icons.edit),
-                                                color: Colors.blue,
-                                              ),
-                                            ],
+                                                      tapIndex = index;
+                                                    });
+                                                    deleteBook(bookId: book.id);
+                                                  },
+                                                  icon: isDeletingBookLoading &&
+                                                          tapIndex == index
+                                                      ? const SizedBox(
+                                                          height: 20,
+                                                          width: 20,
+                                                          child:
+                                                              CircularProgressIndicator())
+                                                      : const Icon(
+                                                          Icons.delete),
+                                                  color: Colors.red,
+                                                ),
+                                                IconButton(
+                                                  onPressed: () {
+                                                    bookAuthorController.text =
+                                                        book.author;
+                                                    bookIdController.text =
+                                                        book.id.toString();
+                                                    bookTittleController.text =
+                                                        book.title;
+                                                    setState(() {
+                                                      if (!isUpdateButtonEnable) {
+                                                        isUpdateButtonEnable =
+                                                            true;
+                                                      } else {
+                                                        isUpdateButtonEnable =
+                                                            false;
+                                                      }
+                                                    });
+                                                  },
+                                                  icon: const Icon(Icons.edit),
+                                                  color: Colors.blue,
+                                                ),
+                                              ],
+                                            ),
+                                            onTap: () {},
                                           ),
-                                          onTap: () {},
                                         ),
                                       ),
                                     );
@@ -379,17 +420,7 @@ class _HomePageState extends State<HomePage> {
                                       vertical:
                                           MediaQuery.of(context).size.height *
                                               0.2),
-                                  child: Column(
-                                    children: [
-                                      const Text("Books Not found"),
-                                      IconButton(
-                                        onPressed: () {
-                                          fetchBooks();
-                                        },
-                                        icon: const Icon(Icons.refresh),
-                                      )
-                                    ],
-                                  ),
+                                  child: const Text("Books Not found"),
                                 ),
                               ),
                   ),

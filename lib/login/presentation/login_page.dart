@@ -43,25 +43,23 @@ class _LoginPageState extends State<LoginPage> {
         body: msg,
       );
 
-      var responseData = json.decode(response.body);
-      print(responseData);
-      print(response.statusCode);
       setState(() {
         _isLoading = false;
       });
 
       if (response.statusCode == 200) {
-        showSnackBar(message: "Successfully Logged");
+        showSnackBar(message: "Successfully Logged", color: Colors.green);
         navigate();
       } else {
         hidekeyboard();
-        showSnackBar(message: "Incorrect Username or password");
+        showSnackBar(
+            message: "Incorrect Username or password", color: Colors.red);
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      showSnackBar(message: "Failed to log in. Please try again later.");
+      showSnackBar(message: e.toString(), color: Colors.red);
     }
   }
 
@@ -74,9 +72,11 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void showSnackBar({required String message}) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+  void showSnackBar({required String message, required Color color}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: color,
+    ));
   }
 
   void hidekeyboard() {
@@ -93,7 +93,11 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        centerTitle: true,
+        title: const Text(
+          'CRUD APP',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Center(
         child: Form(
@@ -104,6 +108,13 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const Text(
+                  "Login",
+                  style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(
+                  height: 50,
+                ),
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 16),

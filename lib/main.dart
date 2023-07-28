@@ -12,11 +12,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-          appBarTheme: const AppBarTheme(
-              color: Colors.redAccent,
-              iconTheme: IconThemeData(color: Colors.white)),
-          inputDecorationTheme:
-              const InputDecorationTheme(contentPadding: EdgeInsets.all(15))),
+        appBarTheme: const AppBarTheme(
+            color: Colors.redAccent,
+            iconTheme: IconThemeData(color: Colors.white)),
+        inputDecorationTheme: const InputDecorationTheme(
+          contentPadding: EdgeInsets.all(15),
+        ),
+      ),
       home: const LoginPage(),
     );
   }
